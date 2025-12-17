@@ -57,7 +57,30 @@ class MeshExporter:
                     export_format='GLB',
                     use_selection=True,
                     export_apply=self.apply_modifiers,
-                    export_yup=True,  # VEML likely uses Y-up
+                    export_yup=True,
+                    # Materials and textures
+                    export_materials='EXPORT',
+                    export_image_format='AUTO',
+                    export_keep_originals=False,
+                    export_original_specular=False,
+                    # Mesh data
+                    export_texcoords=True,
+                    export_normals=True,
+                    export_tangents=True,
+                    export_attributes=True,
+                    export_vertex_color='MATERIAL',
+                    # Objects
+                    export_cameras=True,
+                    export_lights=True,
+                    export_extras=True,
+                    # Skinning and shape keys
+                    export_skins=True,
+                    export_morph=True,
+                    export_morph_normal=True,
+                    export_morph_tangent=True,
+                    # Animation
+                    export_animations=True,
+                    export_morph_animation=True,
                 )
             else:
                 bpy.ops.export_scene.gltf(
@@ -66,6 +89,30 @@ class MeshExporter:
                     use_selection=True,
                     export_apply=self.apply_modifiers,
                     export_yup=True,
+                    # Materials and textures
+                    export_materials='EXPORT',
+                    export_image_format='AUTO',
+                    export_texture_dir='textures',
+                    export_keep_originals=False,
+                    export_original_specular=False,
+                    # Mesh data
+                    export_texcoords=True,
+                    export_normals=True,
+                    export_tangents=True,
+                    export_attributes=True,
+                    export_vertex_color='MATERIAL',
+                    # Objects
+                    export_cameras=True,
+                    export_lights=True,
+                    export_extras=True,
+                    # Skinning and shape keys
+                    export_skins=True,
+                    export_morph=True,
+                    export_morph_normal=True,
+                    export_morph_tangent=True,
+                    # Animation
+                    export_animations=True,
+                    export_morph_animation=True,
                 )
 
             # Store relative path

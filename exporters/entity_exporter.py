@@ -93,6 +93,7 @@ class EntityExporter:
         self._add_type_specific_content(entity, obj, entity_type)
 
         # Add synchronizer if specified
+        veml_props = obj.veml_properties
         if veml_props.synchronizer:
             synchronizer = ET.SubElement(entity, 'synchronizer')
             synchronizer.text = veml_props.synchronizer

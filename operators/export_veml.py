@@ -29,6 +29,16 @@ class EXPORT_OT_veml(bpy.types.Operator, ExportHelper):
         default=False,
     )
 
+    export_mode: EnumProperty(
+        name="Export Mode",
+        description="How to export the scene geometry",
+        items=[
+            ('ENTITIES', "Individual Entities", "Export each object as a separate VEML entity"),
+            ('SINGLE_MESH', "Single World Mesh", "Export entire scene as one GLB and reference in VEML"),
+        ],
+        default='ENTITIES',
+    )
+
     export_meshes: BoolProperty(
         name="Export Custom Meshes",
         description="Export custom meshes as separate GLB files",
@@ -51,14 +61,22 @@ class EXPORT_OT_veml(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    world_mesh_name: StringProperty(
+        name="World Mesh Name",
+        description="Name for the world mesh entity (used in Single World Mesh mode)",
+        default="WorldMesh",
+    )
+
     def execute(self, context):
         exporter = VEMLExporter(
             context=context,
             filepath=self.filepath,
             export_selected=self.export_selected,
+            export_mode=self.export_mode,
             export_meshes=self.export_meshes,
             mesh_format=self.mesh_format,
             apply_modifiers=self.apply_modifiers,
+            world_mesh_name=self.world_mesh_name,
         )
 
         result = exporter.export()
@@ -77,11 +95,18 @@ class EXPORT_OT_veml(bpy.types.Operator, ExportHelper):
 
         # General options
         layout.prop(self, "export_selected")
+        layout.prop(self, "export_mode")
 
         # Mesh options
         box = layout.box()
         box.label(text="Mesh Options", icon='MESH_DATA')
-        box.prop(self, "export_meshes")
-        if self.export_meshes:
+        
+        if self.export_mode == 'SINGLE_MESH':
+            box.prop(self, "world_mesh_name")
             box.prop(self, "mesh_format")
             box.prop(self, "apply_modifiers")
+        else:
+            box.prop(self, "export_meshes")
+            if self.export_meshes:
+                box.prop(self, "mesh_format")
+                box.prop(self, "apply_modifiers")
