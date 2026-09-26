@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import bpy
+
+from . import entry_point
 from bpy.props import (
     StringProperty,
     EnumProperty,
@@ -742,4 +744,29 @@ class VEMLObjectProperties(bpy.types.PropertyGroup):
     placement_sockets_index: IntProperty(
         name="Active Socket Index",
         default=0,
+    )
+
+    # -- Entry point (#115) ------------------------------------------------
+    # Get/set-backed: the checkbox READS AND WRITES the raw `veml_spawn`
+    # custom property on the camera OBJECT (the format contract veml-ingest
+    # honors, #99) and stores NOTHING of its own — a scene marked here is
+    # structurally identical to one marked by hand. Rules (exclusive move,
+    # key removed on disable, no leakage on read) live bpy-free in
+    # entry_point.py, pinned by tools/entry_point_logic_check.py.
+    def _get_is_entry_point(self):
+        return entry_point.get_entry_point(self.id_data)
+
+    def _set_is_entry_point(self, value):
+        entry_point.set_entry_point(bpy.data.objects, self.id_data, bool(value))
+
+    is_entry_point: BoolProperty(
+        name="VEML Entry Point",
+        description=(
+            "This camera is the world's entry point: the exporter uses its "
+            "pose over the active scene camera (precedence: --entry > this > "
+            "active camera > bounds framing). Writes the veml_spawn custom "
+            "property; checking another camera moves it there"
+        ),
+        get=_get_is_entry_point,
+        set=_set_is_entry_point,
     )

@@ -6,11 +6,13 @@ import bpy
 
 from .veml_object_properties import VEMLPlacementSocket, VEMLObjectProperties
 from .veml_scene_properties import VEMLSceneProperties
+from .addon_preferences import VEMLAddonPreferences
 
 classes = (
     VEMLPlacementSocket,
     VEMLObjectProperties,
     VEMLSceneProperties,
+    VEMLAddonPreferences,
 )
 
 

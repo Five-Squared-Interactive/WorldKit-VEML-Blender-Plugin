@@ -39,6 +39,15 @@ class VEML_PT_object_panel(bpy.types.Panel):
             if veml.use_custom_color:
                 layout.prop(veml, "color")
 
+        # Camera: the entry-point mark (#115). One checkbox, bound to the
+        # raw veml_spawn custom property the exporter reads (#99) — checking
+        # it on another camera moves the mark there.
+        if obj.type == 'CAMERA':
+            layout.separator()
+            box = layout.box()
+            box.label(text="Entry Point", icon='CAMERA_DATA')
+            box.prop(veml, "is_entry_point")
+
         # Mesh entity specific
         if veml.entity_type == 'MESH' or (veml.entity_type == 'AUTO' and obj.type == 'MESH'):
             layout.separator()

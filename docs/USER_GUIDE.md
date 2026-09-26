@@ -21,20 +21,23 @@ A comprehensive Blender addon for exporting scenes to VEML (Virtual Environment 
 
 ### Method 1: Install from ZIP (Recommended)
 
-1. Run the packaging script to create a properly structured ZIP:
-   ```powershell
-   .\package_addon.ps1
+1. Build the add-on zip:
+   ```bash
+   pnpm exec turbo build --filter=@fivesqd/blender-ingest
    ```
 
 2. In Blender:
    - Go to **Edit → Preferences → Add-ons**
    - Click **Install...**
-   - Select `veml_exporter.zip`
+   - Select `dist/veml-blender-addon.zip`
    - Enable the addon by checking the box next to **"Import-Export: VEML Exporter"**
 
 ### Method 2: Manual Installation
 
-1. Copy the `veml_exporter` folder to your Blender addons directory:
+1. Copy the add-on source (`Blender-VEML/`) to your Blender addons
+   directory **renamed to `veml_exporter`** — a hyphen is not valid in a
+   Python module name, so Blender cannot import the folder under its own
+   name. This is what the zip build does for you:
    - **Windows**: `%APPDATA%\Blender Foundation\Blender\<version>\scripts\addons\`
    - **macOS**: `~/Library/Application Support/Blender/<version>/scripts/addons/`
    - **Linux**: `~/.config/blender/<version>/scripts/addons/`
@@ -89,7 +92,7 @@ The exporter automatically detects entity types from Blender objects, or you can
 | Speaker | `audio` |
 | Armature | `character` |
 | Text (Font object) | `text` |
-| Camera | *Skipped* |
+| Camera | *Skipped as geometry* — but can mark the world's **entry point** (see Camera Properties) |
 
 ### Manual Entity Types
 
@@ -204,6 +207,26 @@ For multiplayer worlds:
 | **Session ID** | UUID for the session |
 | **Session Name** | Human-readable session name |
 
+### Save as My World
+
+One button from the open scene to a deployed world: saves the .blend, then
+runs `veml-ingest <blend> --deploy <dir> [--title <t>]` — the same bare
+invocation `corpus/README.md` records.
+
+| Property | Description |
+|----------|-------------|
+| **Deploy Directory** | Serving location `--deploy` updates atomically. Required — the button is disabled without one. |
+| **Deploy Title** | Optional `--title`. Left empty, ingest's own default (the file stem) applies. |
+
+The button is disabled, with the reason shown inline, until the file has
+been saved at least once and a deploy directory is set. On success it
+reports the deployed path and which entry-point source won (`--entry` >
+`veml_spawn` camera > active scene camera > bounds framing, #99); every
+ingest warning surfaces as a Blender warning, and a failing run reports the
+CLI's own error output. The ingest command itself is configured once in
+**Preferences → Add-ons → VEML Exporter** (default `veml-ingest` on PATH;
+the monorepo's `node packages/ingest/dist/cli.js` works verbatim).
+
 ---
 
 ## Object Properties
@@ -219,6 +242,17 @@ Access via **Properties Panel → Object → VEML Entity**
 | **Entity Type** | Override auto-detection |
 | **On Load Event** | Script to execute when entity loads |
 | **Synchronizer** | Sync identifier for multiplayer |
+
+### Camera Properties
+
+| Property | Description |
+|----------|-------------|
+| **VEML Entry Point** | Marks this camera as the world's entry point. Writes the `veml_spawn` custom property on the camera object — exactly what the ingest pipeline reads, so a scene marked here is identical to one marked by hand. Checking it on another camera moves the mark there; unchecking removes the property entirely. |
+
+The entry-point precedence at ingest is: `--entry` flag > the `veml_spawn`
+camera > the active scene camera > automatic bounds framing. The ingest
+report names which source won, and warns if the chosen entry lies outside
+the model's bounds.
 
 ### Primitive Mesh Properties
 
@@ -458,7 +492,7 @@ Placement sockets define connection points on entities for modular assembly.
 
 ### "Module not found" errors on install
 
-Make sure you're installing the ZIP created by `package_addon.ps1`, not a ZIP of the raw repository. The addon must be in a folder named `veml_exporter`.
+Make sure you're installing the ZIP the build produces (`dist/veml-blender-addon.zip`), not a ZIP of the raw repository. The addon must be in a folder named `veml_exporter`.
 
 ### Meshes not exporting
 

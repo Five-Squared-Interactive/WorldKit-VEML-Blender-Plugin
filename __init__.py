@@ -10,8 +10,8 @@ bl_info = {
     "location": "File > Import/Export > VEML (.veml)",
     "description": "Import and export Blender scenes to VEML (Virtual Environment Markup Language) format",
     "warning": "",
-    "doc_url": "https://github.com/FiveSquared/WorldKit-VEML-Blender-Plugin/blob/main/docs/USER_GUIDE.md",
-    "tracker_url": "https://github.com/FiveSquared/WorldKit-VEML-Blender-Plugin/issues",
+    "doc_url": "https://github.com/Five-Squared-Interactive/WorldKit-VEML-Blender-Plugin/blob/main/docs/USER_GUIDE.md",
+    "tracker_url": "https://github.com/Five-Squared-Interactive/WorldKit-VEML-Blender-Plugin/issues",
     "category": "Import-Export",
 }
 
