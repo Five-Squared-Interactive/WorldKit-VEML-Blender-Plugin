@@ -1,8 +1,12 @@
-# Copyright (c) 2019-2025 Five Squared Interactive. All rights reserved.
-#
+# Copyright (c) 2019-2026 Five Squared Interactive
 # SPDX-License-Identifier: MIT
 
+#
+
 import bpy
+
+from . import entry_point
+from . import portal_link
 from bpy.props import (
     StringProperty,
     EnumProperty,
@@ -742,4 +746,64 @@ class VEMLObjectProperties(bpy.types.PropertyGroup):
     placement_sockets_index: IntProperty(
         name="Active Socket Index",
         default=0,
+    )
+
+    # -- Entry point -------------------------------------------------------
+    # Get/set-backed: the checkbox READS AND WRITES the raw `veml_spawn`
+    # custom property on the camera OBJECT (the format contract veml-ingest
+    # honors) and stores NOTHING of its own — a scene marked here is
+    # structurally identical to one marked by hand. Rules (exclusive move,
+    # key removed on disable, no leakage on read) live bpy-free in
+    # entry_point.py, pinned by tools/entry_point_logic_check.py.
+    def _get_is_entry_point(self):
+        return entry_point.get_entry_point(self.id_data)
+
+    def _set_is_entry_point(self, value):
+        entry_point.set_entry_point(bpy.data.objects, self.id_data, bool(value))
+
+    is_entry_point: BoolProperty(
+        name="VEML Entry Point",
+        description=(
+            "This camera is the world's entry point: the exporter uses its "
+            "pose over the active scene camera (precedence: --entry > this > "
+            "active camera > bounds framing). Writes the veml_spawn custom "
+            "property; checking another camera moves it there"
+        ),
+        get=_get_is_entry_point,
+        set=_set_is_entry_point,
+    )
+
+    # -- Portal ------------------------------------------------------------
+    # Get/set-backed like the entry point: the fields READ AND WRITE the raw
+    # veml_link_href / veml_link_label custom properties on the object (the
+    # contract veml-ingest reads) and store nothing of their own. Rules live
+    # bpy-free in portal_link.py, pinned by tools/portal_link_check.py.
+    def _get_portal_href(self):
+        return portal_link.get_href(self.id_data)
+
+    def _set_portal_href(self, value):
+        portal_link.set_href(self.id_data, value)
+
+    def _get_portal_label(self):
+        return portal_link.get_label(self.id_data)
+
+    def _set_portal_label(self, value):
+        portal_link.set_label(self.id_data, value)
+
+    portal_href: StringProperty(
+        name="Link",
+        description=(
+            "Make this object a portal: the address it takes a visitor to (another "
+            "world's index.veml, a /w/ page, or a relative path). Empty: not a portal. "
+            "Only http(s) addresses and paths are accepted"
+        ),
+        get=_get_portal_href,
+        set=_set_portal_href,
+    )
+
+    portal_label: StringProperty(
+        name="Label",
+        description="What a visitor sees when they aim at the portal (optional)",
+        get=_get_portal_label,
+        set=_set_portal_label,
     )

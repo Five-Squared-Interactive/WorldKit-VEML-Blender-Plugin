@@ -1,6 +1,7 @@
-# Copyright (c) 2019-2025 Five Squared Interactive. All rights reserved.
-#
+# Copyright (c) 2019-2026 Five Squared Interactive
 # SPDX-License-Identifier: MIT
+
+#
 
 import os
 from xml.etree import ElementTree as ET
@@ -14,7 +15,10 @@ from .mesh_importer import MeshImporter
 class VEMLImporter:
     """Main importer class for VEML format"""
 
-    VEML_NAMESPACE = "http://www.fivesqd.com/schemas/veml/3.0"
+    # 4.0. Parsing itself is namespace-agnostic (_strip_namespace), so
+    # a namespace-less root carrying version="4.0" imports identically —
+    # draft §1.4's discriminator.
+    VEML_NAMESPACE = "http://www.fivesqd.com/schemas/veml/4.0"
     XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 
     def __init__(
@@ -72,10 +76,12 @@ class VEMLImporter:
                 # Import effects
                 self._import_effects(environment)
 
-                # Import entities
+                # Import entities — the 4.0 entity FAMILY (§4.1), not just
+                # the base element name.
+                entity_family = ('entity', 'container', 'asset', 'primitive', 'html', 'lod')
                 for entity in environment:
                     tag = self._strip_namespace(entity.tag)
-                    if tag == 'entity':
+                    if tag in entity_family:
                         obj = self.entity_importer.import_entity(entity, parent=None)
                         if obj:
                             created_objects.append(obj)
@@ -131,7 +137,8 @@ class VEMLImporter:
             if self._strip_namespace(child.tag) == 'script' and child.text:
                 scripts.append(child.text)
         if scripts:
-            veml_props.scripts = ', '.join(scripts)
+            # Scripts are a World setting (scene['veml_world']).
+            scene.veml_world_settings.scripts = ', '.join(scripts)
 
         # Synchronization service
         sync_service = self._find_element(metadata, 'synchronizationservice')

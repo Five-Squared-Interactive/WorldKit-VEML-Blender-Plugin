@@ -21,20 +21,23 @@ A comprehensive Blender addon for exporting scenes to VEML (Virtual Environment 
 
 ### Method 1: Install from ZIP (Recommended)
 
-1. Run the packaging script to create a properly structured ZIP:
-   ```powershell
-   .\package_addon.ps1
+1. Build the add-on zip:
+   ```bash
+   pnpm exec turbo build --filter=@fivesqd/blender-ingest
    ```
 
 2. In Blender:
    - Go to **Edit → Preferences → Add-ons**
    - Click **Install...**
-   - Select `veml_exporter.zip`
+   - Select `dist/veml-blender-addon.zip`
    - Enable the addon by checking the box next to **"Import-Export: VEML Exporter"**
 
 ### Method 2: Manual Installation
 
-1. Copy the `veml_exporter` folder to your Blender addons directory:
+1. Copy the add-on source (`Blender-VEML/`) to your Blender addons
+   directory **renamed to `veml_exporter`** — a hyphen is not valid in a
+   Python module name, so Blender cannot import the folder under its own
+   name. This is what the zip build does for you:
    - **Windows**: `%APPDATA%\Blender Foundation\Blender\<version>\scripts\addons\`
    - **macOS**: `~/Library/Application Support/Blender/<version>/scripts/addons/`
    - **Linux**: `~/.config/blender/<version>/scripts/addons/`
@@ -89,7 +92,7 @@ The exporter automatically detects entity types from Blender objects, or you can
 | Speaker | `audio` |
 | Armature | `character` |
 | Text (Font object) | `text` |
-| Camera | *Skipped* |
+| Camera | *Skipped as geometry* — but can mark the world's **entry point** (see Camera Properties) |
 
 ### Manual Entity Types
 
@@ -174,23 +177,36 @@ Access via **Properties Panel → Scene → VEML World**
 | Property | Description |
 |----------|-------------|
 | **Title** | World title (appears in `<title>` element) |
-| **Scripts** | Comma-separated list of script files to include |
 
-### Background
+### World settings
+
+How the published world behaves. Save as My World publishes these; a field
+left at its default is not stored, so a world that sets nothing publishes as
+before. They live in the scene's `veml_world` custom property, so they travel
+with the .blend even where the add-on is not installed.
+
+| Group | Settings |
+|-------|----------|
+| **Movement** | Allow Flying, Walking Speed, Gravity, Jump Height |
+| **People** | Avatar (a .glb beside the .blend, copied into the world), Name Labels, Label Height, Colour Tint |
+| **Chat** | Chat, Chat Starts Shown |
+| **Phone Buttons and Menu** | Jump, Chat and Fly buttons; the Menu button |
+| **VR** | Turning (snap, smooth, none), Stick Movement, Left and Right Pointer |
+| **Sky** | Procedural Sky, with Sun Elevation and Sun Direction |
+| **Scripts** | Comma-separated .js files beside the .blend, copied into the world |
+
+A file that is not found is a warning when you publish, never a failed
+publish, and the world does not reference it.
+
+### Background (File > Export only)
+
+The direct VEML exporter writes this background. Save as My World does not
+use it: the published world takes its background from the scene's World.
 
 | Type | Properties |
 |------|------------|
 | **Color** | Solid background color (RGBA) |
 | **Panorama** | Path to panoramic image file |
-| **Procedural Sky** | Day/night cycle, sun, moon, stars, clouds toggles |
-
-### Effects
-
-| Property | Description |
-|----------|-------------|
-| **Fog Enabled** | Enable lite fog effect |
-| **Fog Color** | Fog color (RGBA) |
-| **Fog Density** | Fog density (0-1) |
 
 ### Synchronization Service
 
@@ -203,6 +219,47 @@ For multiplayer worlds:
 | **Address** | Server address |
 | **Session ID** | UUID for the session |
 | **Session Name** | Human-readable session name |
+
+### Save as My World
+
+One button from the open scene to a deployed world: saves the .blend, then
+runs `veml-ingest <blend> --deploy <dir> [--title <t>]` — the same bare
+invocation `corpus/README.md` records.
+
+| Property | Description |
+|----------|-------------|
+| **Deploy Directory** | Serving location `--deploy` updates atomically. Required — the button is disabled without one. |
+| **Deploy Title** | Optional `--title`. Left empty, ingest's own default (the file stem) applies. |
+
+The button is disabled, with the reason shown inline, until the file has
+been saved at least once and a deploy directory is set. On success it
+reports the deployed path and which entry-point source won (`--entry` >
+`veml_spawn` camera > active scene camera > bounds framing, #99); every
+ingest warning surfaces as a Blender warning, and a failing run reports the
+CLI's own error output. The ingest command itself is configured once in
+**Preferences → Add-ons → VEML Exporter** (default `veml-ingest` on PATH;
+the monorepo's `node packages/ingest/dist/cli.js` works verbatim).
+
+### Animation and sound
+
+Nothing to set: Save as My World carries both.
+
+- **Animation.** The scene's timeline publishes as one animation, looping,
+  just as pressing Play in Blender shows it. A scene with no keyframes
+  publishes still, as before.
+- **Sound.** Each Speaker object that is not muted plays in the world at the
+  speaker's place, looping, with its Volume and its Distance settings. Its
+  sound is converted to MP3 and published beside the model. Browsers only
+  allow sound after the visitor's first click or tap, so it starts then. A
+  speaker whose sound file is missing is skipped with a warning.
+- **Speaker cones.** A speaker whose Cone angles (Inner or Outer) are below
+  360° is directional in the world, facing the way it faces in Blender: full
+  volume inside the inner cone, the Outer Cone Volume outside the outer cone,
+  and a smooth change between them. A speaker with both angles at 360° spreads
+  its sound in all directions.
+
+Not yet carried: a speaker that follows a moving parent, and sounds that play
+once or on a trigger.
 
 ---
 
@@ -219,6 +276,33 @@ Access via **Properties Panel → Object → VEML Entity**
 | **Entity Type** | Override auto-detection |
 | **On Load Event** | Script to execute when entity loads |
 | **Synchronizer** | Sync identifier for multiplayer |
+
+### Camera Properties
+
+| Property | Description |
+|----------|-------------|
+| **VEML Entry Point** | Marks this camera as the world's entry point. Writes the `veml_spawn` custom property on the camera object — exactly what the ingest pipeline reads, so a scene marked here is identical to one marked by hand. Checking it on another camera moves the mark there; unchecking removes the property entirely. |
+
+The entry-point precedence at ingest is: `--entry` flag > the `veml_spawn`
+camera > the active scene camera > automatic bounds framing. The ingest
+report names which source won, and warns if the chosen entry lies outside
+the model's bounds.
+
+### Portal (mesh objects)
+
+Make any mesh a portal: the object you modelled is what visitors aim at and
+activate, where it stands and as big as it is.
+
+| Property | Description |
+|----------|-------------|
+| **Link** | Where the portal goes: another world's `index.veml`, a `/w/` page, or a relative path. Only `http(s)` addresses and paths are accepted. Clearing it makes the object ordinary scenery again. |
+| **Label** | What a visitor sees when they aim at it (optional). |
+
+These write the `veml_link_href` and `veml_link_label` custom properties on
+the object, which the publish step reads, so an object marked by hand works
+the same. Save as My World publishes each portal as its own asset, carrying
+its link. A link with any other scheme (`javascript:`, `file:`) makes no
+portal: the object stays scenery and the publish warns.
 
 ### Primitive Mesh Properties
 
@@ -379,7 +463,7 @@ Placement sockets define connection points on entities for modular assembly.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<veml xmlns="http://www.fivesqd.com/schemas/veml/3.0">
+<veml xmlns="http://www.fivesqd.com/schemas/veml/4.0">
   <metadata>
     <title>My Scene</title>
   </metadata>
@@ -458,7 +542,7 @@ Placement sockets define connection points on entities for modular assembly.
 
 ### "Module not found" errors on install
 
-Make sure you're installing the ZIP created by `package_addon.ps1`, not a ZIP of the raw repository. The addon must be in a folder named `veml_exporter`.
+Make sure you're installing the ZIP the build produces (`dist/veml-blender-addon.zip`), not a ZIP of the raw repository. The addon must be in a folder named `veml_exporter`.
 
 ### Meshes not exporting
 

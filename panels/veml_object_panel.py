@@ -1,6 +1,7 @@
-# Copyright (c) 2019-2025 Five Squared Interactive. All rights reserved.
-#
+# Copyright (c) 2019-2026 Five Squared Interactive
 # SPDX-License-Identifier: MIT
+
+#
 
 import bpy
 
@@ -38,6 +39,26 @@ class VEML_PT_object_panel(bpy.types.Panel):
             layout.prop(veml, "use_custom_color")
             if veml.use_custom_color:
                 layout.prop(veml, "color")
+
+        # Camera: the entry-point mark. One checkbox, bound to the
+        # raw veml_spawn custom property the exporter reads — checking
+        # it on another camera moves the mark there.
+        if obj.type == 'CAMERA':
+            layout.separator()
+            box = layout.box()
+            box.label(text="Entry Point", icon='CAMERA_DATA')
+            box.prop(veml, "is_entry_point")
+
+        # Mesh: the portal mark, bound to the raw
+        # veml_link_href / veml_link_label properties the exporter reads. The
+        # object itself becomes the portal, where and as big as it is here.
+        if obj.type == 'MESH':
+            layout.separator()
+            box = layout.box()
+            box.label(text="Portal", icon='LINKED')
+            box.prop(veml, "portal_href")
+            if veml.portal_href:
+                box.prop(veml, "portal_label")
 
         # Mesh entity specific
         if veml.entity_type == 'MESH' or (veml.entity_type == 'AUTO' and obj.type == 'MESH'):

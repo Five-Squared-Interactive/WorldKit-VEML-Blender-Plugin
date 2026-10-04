@@ -1,6 +1,7 @@
-# Copyright (c) 2019-2025 Five Squared Interactive. All rights reserved.
-#
+# Copyright (c) 2019-2026 Five Squared Interactive
 # SPDX-License-Identifier: MIT
+
+#
 
 import math
 from xml.etree import ElementTree as ET
@@ -15,7 +16,7 @@ from ..utils.transform_utils import convert_position_from_yup, convert_rotation_
 class EntityImporter:
     """Imports VEML entity elements to Blender objects"""
 
-    VEML_NAMESPACE = "http://www.fivesqd.com/schemas/veml/3.0"
+    VEML_NAMESPACE = "http://www.fivesqd.com/schemas/veml/4.0"  # 4.0
     XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 
     # Mapping of VEML entity types to Blender primitive creation
@@ -99,16 +100,30 @@ class EntityImporter:
         # Import type-specific properties
         self._import_type_specific(obj, entity_elem, entity_type)
 
-        # Process child entities
+        # Process child entities — the 4.0 entity FAMILY (§4.1).
         for child in entity_elem:
             child_tag = self._strip_namespace(child.tag)
-            if child_tag == 'entity':
+            if child_tag in ('entity', 'container', 'asset', 'primitive', 'html', 'lod'):
                 self.import_entity(child, parent=obj)
 
         return obj
 
     def _get_entity_type(self, entity_elem):
-        """Extract entity type from xsi:type attribute"""
+        """Determine the entity kind. In 4.0 the ELEMENT NAME is the
+        discriminator (asset/primitive/container/entity/html/lod); the
+        prototype-era xsi:type attribute remains as a legacy fallback for
+        pre-4.0 files."""
+        local = self._strip_namespace(entity_elem.tag).lower()
+        if local == 'asset':
+            return 'mesh'
+        if local == 'primitive':
+            shape = (entity_elem.get('shape') or 'cube').replace('-', '')
+            return f'{shape}mesh'
+        if local in ('container', 'lod'):
+            return 'container'
+        if local == 'html':
+            return 'html'
+
         xsi_type = entity_elem.get(f'{{{self.XSI_NAMESPACE}}}type')
         if xsi_type is None:
             # Try without namespace
@@ -228,7 +243,15 @@ class EntityImporter:
         if not self.import_meshes:
             return self._create_empty(name, empty_type='CUBE')
 
-        # Get mesh resource path
+        # 4.0 asset: the resource is the `src` ATTRIBUTE (§4.4).
+        src = entity_elem.get('src')
+        if src:
+            obj = self.mesh_importer.import_mesh(src)
+            if obj is not None:
+                obj.name = name
+                return obj
+
+        # Legacy (pre-4.0) mesh-resource child element fallback.
         mesh_resource = self._find_element(entity_elem, 'mesh-resource')
         if mesh_resource is not None and mesh_resource.text:
             obj = self.mesh_importer.import_mesh(mesh_resource.text)
