@@ -512,6 +512,8 @@ def build_deploy_argv(
     no_lookdev_sky=False,
     sync_address="",
     sync_session="",
+    visibility="",
+    viewers=(),
 ):
     """Build the argv list for the ingest CLI's --deploy invocation.
 
@@ -530,7 +532,11 @@ def build_deploy_argv(
     change what ships for everyone who never touched the checkbox.
 
     `publish_endpoint` adds `--publish`; `world_id` adds `--world-id`, and
-    is ignored without an endpoint because it would mean nothing. There is
+    is ignored without an endpoint because it would mean nothing.
+    `visibility` is "restricted" (only people the owner allows may view,
+    `--restricted`, plus a `--viewer` per entry of `viewers`), "public"
+    (`--public`) or "" (say nothing; the world keeps what it had), and is
+    likewise ignored without an endpoint. There is
     deliberately NO token parameter: a credential in argv is a credential in
     the machine's process list. It goes through publish_env instead.
     """
@@ -558,6 +564,12 @@ def build_deploy_argv(
         argv += ["--publish", publish_endpoint]
         if world_id:
             argv += ["--world-id", world_id]
+        if visibility == "restricted":
+            argv += ["--restricted"]
+            for viewer in viewers:
+                argv += ["--viewer", viewer]
+        elif visibility == "public":
+            argv += ["--public"]
     return argv
 
 
@@ -724,3 +736,14 @@ def parse_publish_result(stdout):
     if not url_match or not id_match:
         return (None, None)
     return (url_match.group(1), id_match.group(1))
+
+
+def parse_viewers(text):
+    """The panel's free-text viewers field as a list: commas, spaces and
+    newlines separate entries, blanks drop, order kept."""
+    out = []
+    for raw in re.split(r"[,\s]+", text or ""):
+        entry = raw.strip()
+        if entry:
+            out.append(entry)
+    return out

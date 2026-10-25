@@ -101,6 +101,10 @@ class VEML_PT_scene_panel(bpy.types.Panel):
         # Publishing — optional. With an address, the same
         # press uploads the world and hands back a link.
         box.prop(veml, "publish_endpoint")
+        if veml.publish_endpoint:
+            box.prop(veml, "restricted")
+            if veml.restricted:
+                box.prop(veml, "viewers")
         if veml.publish_endpoint and veml.publish_world_id:
             # The id is the service's, shown but not typed: a hand-edited one
             # fails at publish time with "that world is not on this service".

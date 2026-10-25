@@ -40,21 +40,26 @@ def default_viewer_url():
     return _value("VIEWER_URL")
 
 
-def default_sign_in_url():
-    """The sign-in page a packaged build points at, or ""."""
-    return _value("SIGN_IN_URL")
+def default_authorize_url():
+    """The identity provider's OAuth authorize address a packaged build signs in at, or ""."""
+    return _value("AUTHORIZE_URL")
 
 
-def default_token_endpoint():
-    """The identity provider's token endpoint a packaged build redeems codes at, or ""."""
-    return _value("TOKEN_ENDPOINT")
+def default_oauth_token_url():
+    """The identity provider's OAuth token address a packaged build redeems codes at, or ""."""
+    return _value("OAUTH_TOKEN_URL")
+
+
+def default_oauth_client_id():
+    """The client id the identity provider gave a packaged build, or ""."""
+    return _value("OAUTH_CLIENT_ID")
+
+
+def default_loopback_ports():
+    """The loopback ports a packaged build's client is registered with, comma-separated, or ""."""
+    return _value("LOOPBACK_PORTS")
 
 
 def default_sync_address():
     """The rendezvous a packaged build makes worlds meet at, or ""."""
     return _value("SYNC_ADDRESS")
-
-
-def default_identity_api_key():
-    """The identity provider's publishable API key a packaged build sends, or ""."""
-    return _value("IDENTITY_API_KEY")
