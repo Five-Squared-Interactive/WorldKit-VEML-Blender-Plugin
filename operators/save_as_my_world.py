@@ -102,7 +102,7 @@ def _renew_before_publish(context):
     if not stored["refresh"] or not sign_in_flow.needs_refresh(stored["expires_at"]):
         return None
     session = sign_in_flow.resolve_session(
-        stored, getattr(prefs, "token_endpoint", ""), getattr(prefs, "identity_api_key", "")
+        stored, getattr(prefs, "oauth_token_url", ""), getattr(prefs, "oauth_client_id", "")
     )
     if session["state"] == "renewed":
         sign_in_op.store_tokens(prefs, session["access"], session["refresh"], session["expires_at"])
@@ -260,6 +260,9 @@ def _publish_now(context, op=None):
             publish_endpoint=veml.publish_endpoint,
             world_id=veml.publish_world_id,
             no_lookdev_sky=veml.no_lookdev_sky,
+            # The button states who may view every time, so the box is the truth.
+            visibility="restricted" if veml.restricted else "public",
+            viewers=deploy_command.parse_viewers(veml.viewers) if veml.restricted else (),
             **_room_args(veml),
         )
 

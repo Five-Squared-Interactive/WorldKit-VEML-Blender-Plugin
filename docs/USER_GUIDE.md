@@ -21,15 +21,13 @@ A comprehensive Blender addon for exporting scenes to VEML (Virtual Environment 
 
 ### Method 1: Install from ZIP (Recommended)
 
-1. Build the add-on zip:
-   ```bash
-   pnpm exec turbo build --filter=@fivesqd/blender-ingest
-   ```
+1. Download `veml-blender-addon.zip` from the
+   [latest release](https://github.com/Five-Squared-Interactive/WorldKit-VEML-Blender-Plugin/releases/latest).
 
 2. In Blender:
    - Go to **Edit → Preferences → Add-ons**
-   - Click **Install...**
-   - Select `dist/veml-blender-addon.zip`
+   - Click **Install from Disk...**
+   - Select the `veml-blender-addon.zip` you downloaded
    - Enable the addon by checking the box next to **"Import-Export: VEML Exporter"**
 
 ### Method 2: Manual Installation
@@ -542,7 +540,7 @@ Placement sockets define connection points on entities for modular assembly.
 
 ### "Module not found" errors on install
 
-Make sure you're installing the ZIP the build produces (`dist/veml-blender-addon.zip`), not a ZIP of the raw repository. The addon must be in a folder named `veml_exporter`.
+Make sure you're installing `veml-blender-addon.zip` from the latest release, not a ZIP of the raw repository (GitHub's "Download ZIP" button gives you the source, which cannot build a world). The addon must be in a folder named `veml_exporter`.
 
 ### Meshes not exporting
 

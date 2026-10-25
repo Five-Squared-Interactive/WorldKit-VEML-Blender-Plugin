@@ -6,21 +6,21 @@
 # Signing in from Blender: press the button, sign in in the browser, and the
 # token arrives here on its own.
 #
-# Blender has no browser and cannot read a page's URL, so this is a loopback
-# code flow (properties/sign_in_flow.py, bpy-free): this add-on mints a PKCE
-# verifier + challenge and a path nonce, listens on 127.0.0.1:<free port>/
-# <nonce>, and opens the configured sign-in page carrying the challenge and
-# that loopback address. The page hands the challenge to the identity
-# provider; the provider sends the browser back to the loopback with a
-# single-use code; a timer here picks the code up, redeems it outbound with
-# the verifier, and writes the token into the Publish Token preference. A
-# code, never a token, crosses the loopback — a code is worthless without the
-# verifier, which never leaves this process.
+# Blender has no browser and cannot read a page's URL, so this is OAuth 2.1
+# on the loopback (properties/sign_in_flow.py, bpy-free): this add-on mints a
+# PKCE verifier + challenge and a state, listens on 127.0.0.1:<port>/callback,
+# and opens the provider's authorize address carrying its client id, the
+# challenge, the state and that loopback address. The person signs in there
+# by any method the provider offers; the provider sends the browser back to
+# the loopback with a single-use code; a timer here picks the code up, redeems
+# it outbound with the verifier, and writes the token into the Publish Token
+# preference. A code, never a token, crosses the loopback - a code is
+# worthless without the verifier, which never leaves this process.
 #
-# This add-on names no identity service and hardcodes no host. The sign-in
-# page, the token endpoint and the API key are preferences, empty by default
-# in a source checkout, so the same button works against any provider that
-# speaks this flow — or against none.
+# This add-on names no identity service and hardcodes no host. The authorize
+# and token addresses, the client id and the loopback ports are preferences,
+# empty by default in a source checkout, so the same button works against any
+# OAuth 2.1 provider - or against none.
 
 import os
 import threading
@@ -46,6 +46,17 @@ def _preferences(context):
 
 def _pref(prefs, name):
     return "" if prefs is None else getattr(prefs, name, "")
+
+
+def _refusal(prefs):
+    """Why a sign-in may not start now, in a sentence, or None."""
+    return sign_in_flow.validate_sign_in_flow(
+        _pref(prefs, "authorize_url"),
+        _pref(prefs, "oauth_token_url"),
+        _pref(prefs, "oauth_client_id"),
+        _pref(prefs, "loopback_ports"),
+        os.environ.get(deploy_command.PUBLISH_TOKEN_VAR, ""),
+    )
 
 
 def _cancel_pending():
@@ -76,12 +87,18 @@ def complete_pending(prefs, code=None, exchange=sign_in_flow.exchange_code):
     if flow is None:
         return "No sign-in is in progress."
     if code is None:
-        code = flow["listener"].wait(0)
+        came = flow["listener"].wait(0)
+        if came is not None and came[0] == "error":
+            _cancel_pending()
+            return "The sign-in was cancelled in the browser (%s)." % came[1]
+        code = came[1] if came is not None else None
     if code is None:
         return "The browser has not come back with a code yet."
     _cancel_pending()
     try:
-        token, refresh, expires_at = exchange(flow["token_endpoint"], flow["api_key"], code, flow["verifier"])
+        token, refresh, expires_at = exchange(
+            flow["token_url"], flow["client_id"], code, flow["verifier"], flow["redirect_uri"]
+        )
     except sign_in_flow.SignInError as err:
         return str(err)
     store_tokens(prefs, token, refresh, expires_at)
@@ -183,16 +200,16 @@ def renew_in_background(prefs):
     global _renewal
     if _renewal is not None or time.monotonic() < _renew_not_before:
         return False
-    endpoint = _pref(prefs, "token_endpoint")
-    api_key = _pref(prefs, "identity_api_key")
+    token_url = _pref(prefs, "oauth_token_url")
+    client_id = _pref(prefs, "oauth_client_id")
     refresh_token = _pref(prefs, "refresh_token")
-    if not refresh_token or not endpoint:
+    if not refresh_token or not token_url:
         return False
     slot = {"prefs": prefs, "result": None, "error": None, "done": threading.Event()}
 
     def work():
         try:
-            slot["result"] = sign_in_flow.refresh_access(endpoint, api_key, refresh_token)
+            slot["result"] = sign_in_flow.refresh_access(token_url, client_id, refresh_token)
         except Exception as err:  # reported by finish_renewal, never raised on a thread
             slot["error"] = err
         finally:
@@ -261,30 +278,25 @@ def start_sign_in(prefs, then=None, run_publish=None, open_browser=None):
     passes then="publish" and the callable that finishes its publish.
     """
     global _pending
-    error = sign_in_flow.validate_sign_in_flow(
-        _pref(prefs, "sign_in_url"),
-        _pref(prefs, "token_endpoint"),
-        _pref(prefs, "identity_api_key"),
-        os.environ.get(deploy_command.PUBLISH_TOKEN_VAR, ""),
-    )
+    error = _refusal(prefs)
     if error:
         return error
     _cancel_pending()
     verifier, challenge = sign_in_flow.make_pkce()
-    nonce = sign_in_flow.make_nonce()
+    state = sign_in_flow.make_state()
     try:
-        listener = sign_in_flow.start_listener(nonce)
+        listener = sign_in_flow.start_listener(state, sign_in_flow.parse_ports(prefs.loopback_ports))
     except OSError as err:
         return "could not listen on the loopback: %s" % err
-    url = sign_in_flow.build_sign_in_url(
-        prefs.sign_in_url, challenge, sign_in_flow.loopback_redirect(listener.port, nonce)
-    )
+    redirect_uri = sign_in_flow.loopback_redirect(listener.port)
+    url = sign_in_flow.build_authorize_url(prefs.authorize_url, prefs.oauth_client_id, challenge, redirect_uri, state)
     _pending = {
         "listener": listener,
         "verifier": verifier,
-        "nonce": nonce,
-        "token_endpoint": prefs.token_endpoint,
-        "api_key": prefs.identity_api_key,
+        "state": state,
+        "redirect_uri": redirect_uri,
+        "token_url": prefs.oauth_token_url.strip(),
+        "client_id": prefs.oauth_client_id.strip(),
         "prefs": prefs,
         "started": time.monotonic(),
         "then": then,
@@ -304,7 +316,7 @@ def start_sign_in(prefs, then=None, run_publish=None, open_browser=None):
         return "could not open a browser: %s" % err
     if not opened:
         _cancel_pending()
-        return "could not open a browser. Open the sign-in page yourself: " + prefs.sign_in_url.strip()
+        return "could not open a browser. Open this address yourself: " + url
     try:
         if not bpy.app.timers.is_registered(_poll):
             bpy.app.timers.register(_poll, first_interval=0.5)
@@ -318,9 +330,13 @@ def _poll():
     flow = _pending
     if flow is None:
         return None
-    code = flow["listener"].wait(0)
-    if code is not None:
-        error = complete_pending(flow["prefs"], code=code)
+    came = flow["listener"].wait(0)
+    if came is not None and came[0] == "error":
+        _cancel_pending()
+        print("[veml] sign in: cancelled in the browser (%s)" % came[1])
+        return None
+    if came is not None:
+        error = complete_pending(flow["prefs"], code=came[1])
         if error:
             print("[veml] sign in: " + error)
         else:
@@ -342,12 +358,7 @@ class VEML_OT_sign_in(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         prefs = _preferences(context)
-        error = sign_in_flow.validate_sign_in_flow(
-            _pref(prefs, "sign_in_url"),
-            _pref(prefs, "token_endpoint"),
-            _pref(prefs, "identity_api_key"),
-            os.environ.get(deploy_command.PUBLISH_TOKEN_VAR, ""),
-        )
+        error = _refusal(prefs)
         if error:
             cls.poll_message_set(error)
             return False
@@ -358,12 +369,7 @@ class VEML_OT_sign_in(bpy.types.Operator):
         prefs = _preferences(context)
         # Checked again rather than trusted from poll(): an environment
         # variable can be set by something else between a redraw and a click.
-        error = sign_in_flow.validate_sign_in_flow(
-            _pref(prefs, "sign_in_url"),
-            _pref(prefs, "token_endpoint"),
-            _pref(prefs, "identity_api_key"),
-            os.environ.get(deploy_command.PUBLISH_TOKEN_VAR, ""),
-        )
+        error = _refusal(prefs)
         if error:
             self.report({'ERROR'}, error)
             return {'CANCELLED'}

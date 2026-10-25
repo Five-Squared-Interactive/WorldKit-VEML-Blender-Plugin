@@ -202,6 +202,28 @@ class VEMLSceneProperties(bpy.types.PropertyGroup):
         default=site_defaults.default_publish_endpoint(),
     )
 
+    restricted: BoolProperty(
+        name="Only People I Allow",
+        description=(
+            "Publish the world so only you and the people you list can open "
+            "it. They sign in with the service's identity provider, and the "
+            "service checks them against your list; the "
+            "world is not listed. Untick to publish for anyone and list it"
+        ),
+        # Off: publishing lists the world unless the author asks otherwise.
+        default=False,
+    )
+
+    viewers: StringProperty(
+        name="Allowed Viewers",
+        description=(
+            "Who may open the world when it is restricted: email addresses, "
+            "separated by commas or spaces. Applied when you press the button; "
+            "the service keeps the list across re-publishes"
+        ),
+        default="",
+    )
+
     open_after_publish: BoolProperty(
         name="Open When Published",
         description=(

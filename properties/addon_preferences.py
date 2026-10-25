@@ -53,35 +53,47 @@ class VEMLAddonPreferences(bpy.types.AddonPreferences):
         default=site_defaults.default_viewer_url() or DEFAULT_VIEWER_URL,
     )
 
-    sign_in_url: bpy.props.StringProperty(
-        name="Sign-in Address",
+    # Signing in is OAuth 2.1 with this add-on as a public client. The names
+    # are new on purpose: Blender keeps a saved preference across upgrades,
+    # and a value saved for an older sign-in would otherwise beat these.
+    authorize_url: bpy.props.StringProperty(
+        name="Authorize Address",
         description=(
-            "Your identity provider's sign-in page. The Sign In button opens it in a "
-            "browser; when you finish there, the token arrives in Publish Token "
-            "below on its own. A packaged build may arrive pointing at the provider "
-            "it was built for; built from source it is empty and deliberately not "
-            "guessed - this add-on works against any provider, or none"
+            "Your identity provider's OAuth authorize address. The Sign In button opens "
+            "it in a browser; when you finish there, the token arrives in Publish Token "
+            "below on its own. A packaged build may arrive pointing at the provider it "
+            "was built for; built from source it is empty and deliberately not guessed - "
+            "this add-on works against any provider, or none"
         ),
-        default=site_defaults.default_sign_in_url(),
+        default=site_defaults.default_authorize_url(),
     )
 
-    token_endpoint: bpy.props.StringProperty(
-        name="Token Endpoint",
+    oauth_token_url: bpy.props.StringProperty(
+        name="Token Address",
         description=(
             "Where the sign-in code is redeemed for a token, at your identity provider. "
-            "Set alongside the sign-in address; empty when built from source"
+            "Set alongside the authorize address; empty when built from source"
         ),
-        default=site_defaults.default_token_endpoint(),
+        default=site_defaults.default_oauth_token_url(),
     )
 
-    identity_api_key: bpy.props.StringProperty(
-        name="Identity API Key",
+    oauth_client_id: bpy.props.StringProperty(
+        name="Client ID",
         description=(
-            "Your identity provider's publishable API key, sent when redeeming the "
-            "sign-in code. Publishable, not secret; empty when built from source"
+            "The client id your identity provider gave this add-on. Public, not secret; "
+            "empty when built from source"
         ),
-        default=site_defaults.default_identity_api_key(),
-        subtype='PASSWORD',
+        default=site_defaults.default_oauth_client_id(),
+    )
+
+    loopback_ports: bpy.props.StringProperty(
+        name="Loopback Ports",
+        description=(
+            "Comma-separated ports the browser may return to on 127.0.0.1, each "
+            "registered with your provider; the first free one is used. Empty uses any "
+            "free port, for providers that allow it"
+        ),
+        default=site_defaults.default_loopback_ports(),
     )
 
     publish_token: bpy.props.StringProperty(
@@ -120,9 +132,10 @@ class VEMLAddonPreferences(bpy.types.AddonPreferences):
         layout.prop(self, "viewer_url")
 
         layout.separator()
-        layout.prop(self, "sign_in_url")
-        layout.prop(self, "token_endpoint")
-        layout.prop(self, "identity_api_key")
+        layout.prop(self, "authorize_url")
+        layout.prop(self, "oauth_token_url")
+        layout.prop(self, "oauth_client_id")
+        layout.prop(self, "loopback_ports")
         row = layout.row(align=True)
         row.operator("veml.sign_in", icon='URL')
         row.operator("veml.sign_out", icon='X')

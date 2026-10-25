@@ -59,12 +59,16 @@ the writer.
 
 ## Sign-in, in one paragraph
 
-The add-on names no identity service and hardcodes no host: the sign-in page,
-token endpoint and publishable key are preferences, empty in a source build.
-A press mints a PKCE verifier, opens the sign-in page in a browser and listens
-on loopback for a single-use code. A timer picks the code up and redeems it
-outbound for a token. A code crosses the loopback, never a token — a code is
-worthless without the verifier, which never leaves the add-on.
+The add-on is an OAuth 2.1 public client that names no identity service and
+hardcodes no host: the authorize and token addresses, the client id and the
+loopback ports are preferences, empty in a source build. A press mints a PKCE
+verifier and a state, listens on `127.0.0.1:<port>/callback` (the first free
+listed port, or any free one when none are listed), and opens the authorize
+address in a browser, where the person signs in by any method the provider
+offers. A timer picks up the single-use code that comes back with the same
+state and redeems it outbound for a token. A code crosses the loopback, never
+a token — a code is worthless without the verifier, which never leaves the
+add-on. Ports are listed because many providers match redirect URIs exactly.
 
 ## Adding a property the panel draws
 

@@ -28,12 +28,8 @@ with no install and no account.
 
 ### Install
 
-1. Get `veml-blender-addon.zip`. From a checkout,
-   `pnpm exec turbo build --filter=@fivesqd/blender-ingest` writes it to
-   `packages/blender-ingest/dist/`. (Use turbo, not `pnpm --filter`: the zip
-   carries the ingest CLI, and turbo is what builds `@fivesqd/ingest` first.
-   A build with no ingest to carry fails rather than shipping a zip that
-   cannot build a world.)
+1. Download `veml-blender-addon.zip` from the
+   [latest release](https://github.com/Five-Squared-Interactive/WorldKit-VEML-Blender-Plugin/releases/latest).
 2. In Blender: **Edit → Preferences → Add-ons → Install from Disk**, pick the
    zip, and tick it on.
 3. Nothing. The add-on carries the whole world pipeline, and needs a Node.js
@@ -66,6 +62,17 @@ the panel says so under the button and offers **Sign In** right there; pressing
 **Save as My World** in that state opens the sign-in in your browser and
 publishes on its own once you are back. A sign-in lasts: the add-on renews the
 token quietly before each publish, so you sign in once, not every hour.
+
+**Who can open it.** A published world is open to anyone with its address
+unless you tick **Only People I Allow**. Then fill **Allowed Viewers** with
+their email addresses (commas or spaces between them). The world's address
+does not change and is not listed; a visitor who opens it is asked to sign
+in, with the same account kind you publish with, and the service lets them
+in if they are on your list or turns them away if they are not. You can
+always open your own world. The list is kept on the service: re-publishing
+keeps it, and unticking the box opens the world to everyone without
+forgetting who was on it, so ticking it again restores them. The box states
+your choice every time you press the button, so the box is the truth.
 **Sign Out** is in the add-on preferences, beside Sign In; it forgets both tokens.
 
 ### Export a single .veml (the older, narrower path)
