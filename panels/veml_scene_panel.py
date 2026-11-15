@@ -8,7 +8,7 @@ import bpy
 from ..operators.open_my_world import _viewer_url
 from ..operators import sign_in as sign_in_op
 from ..operators.save_as_my_world import _ingest_command, _resolve_token
-from ..properties import deploy_command
+from ..properties import deploy_command, lookdev_sky
 from ..utils import node_runtime
 
 
@@ -96,8 +96,10 @@ class VEML_PT_scene_panel(bpy.types.Panel):
         box.prop(veml, "deploy_title")
         # Named for what the person sees, not for the flag it sends: "lookdev"
         # is Blender's word, and someone pressing this button is asking about
-        # the forest behind their world, not about a shading mode.
-        box.prop(veml, "no_lookdev_sky")
+        # the forest behind their world, not about a shading mode. The label
+        # names the file, when a viewport is lit by one.
+        sky = lookdev_sky.viewport_sky_name(getattr(context, "screen", None))
+        box.prop(veml, "no_lookdev_sky", text=lookdev_sky.checkbox_text(sky))
         # Publishing — optional. With an address, the same
         # press uploads the world and hands back a link.
         box.prop(veml, "publish_endpoint")

@@ -306,6 +306,14 @@ def _publish_now(context, op=None):
         # Fill the viewable address in, so "Open in Browser" lights up
         # without anyone copying a link out of a status bar.
         veml.world_url = url
+        # And save the file again, so the id is IN the file: the first save
+        # above went out before the publish answered, and a scene closed
+        # without another save would forget its world and publish a new one
+        # at a new address next time. The button is called Save and Publish.
+        try:
+            bpy.ops.wm.save_mainfile()
+        except RuntimeError as err:
+            report('WARNING', "the world's address could not be saved into the file (%s); save the scene before closing it" % err)
     elif veml.publish_endpoint:
         # The run was asked to publish and no result came back. It exited
         # zero, so the world IS deployed locally - say both things.
